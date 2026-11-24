@@ -101,9 +101,9 @@ a{color:var(--dusk)}[hidden]{display:none!important}
 
     <div class="bonus" id="bonus" hidden>
       <h3>Double your chances</h3>
-      <p>Post a photo with a Great Southern product, make your account public, and tag <span class="tags">#greatsouthern</span> or <span class="tags">#thestoryneverended</span>. Add #comp so people know you're entering a competition.</p>
-      <label for="post">Link to your post (optional)</label>
-      <input id="post" type="text" inputmode="url" autocomplete="off" placeholder="Paste the link here">
+      <p>Post a photo with a Great Southern product, make your account public, and tag <span class="tags">#greatsouthern</span> or <span class="tags">#thestoryneverended</span>. Add #comp so people know you're entering a competition. Then upload a screenshot that shows your username, photo and caption.</p>
+      <label for="post">Screenshot of your post (optional)</label>
+      <input id="post" type="file" accept="image/*" style="width:100%;font:inherit;color:var(--chrome);margin-bottom:.35rem">
       <p class="err" id="e-post"></p>
       <p style="font-size:.78rem;color:var(--mist);margin:0">Bonus entries are confirmed by our team. Posts must stay public until [INSERT DRAW CLOSE DATE].</p>
     </div>
@@ -167,7 +167,6 @@ function check(){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v("email"))) e.email="Enter a valid email address.";
   if(!/^\d{4}$/.test(v("postcode"))) e.postcode="Enter a 4-digit postcode.";
   if(sel.includes("testdrive")){ if(!v("tddate")) e.tddate="Choose a date."; if(!v("tdtime")) e.tdtime="Choose a time."; }
-  if(sel.includes("comp") && v("post") && !/^https?:\/\/\S+\.\S+/i.test(v("post"))) e.post="Paste the full link, starting with https://";
   if(!$("terms").checked) e.terms="Accept the terms to continue.";
   ["name","mobile","email","postcode","tddate","tdtime","post","terms"].forEach(k=>$("e-"+k).textContent=e[k]||"");
   return !Object.keys(e).length;
@@ -175,14 +174,32 @@ function check(){
 const LABELS={interest:"We'll be in touch with news ahead of the February 2027 launch.",
  testdrive:"",
 
- comp:"You're in the draw for the Great Barrier Reef holiday. If you added a post link, we'll check it and confirm your bonus entry."};
+ comp:"You're in the draw for the Great Barrier Reef holiday. If you added a screenshot, we'll check it and confirm your bonus entry."};
+let shot="", shotBusy=null;
+$("post").addEventListener("change",()=>{
+  const f=$("post").files[0]; shot=""; $("e-post").textContent=""; if(!f) return;
+  shotBusy=new Promise(res=>{
+    const url=URL.createObjectURL(f), img=new Image();
+    img.onload=()=>{
+      const s=Math.min(1,1280/Math.max(img.width,img.height)), c=document.createElement("canvas");
+      c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      let q=.7; shot=c.toDataURL("image/jpeg",q);
+      while(shot.length>1200000&&q>.3){ q-=.15; shot=c.toDataURL("image/jpeg",q); }
+      URL.revokeObjectURL(url); res();
+    };
+    img.onerror=()=>{ $("e-post").textContent="We couldn't read that file. Try a different screenshot, or leave it blank."; $("post").value=""; URL.revokeObjectURL(url); res(); };
+    img.src=url;
+  });
+});
 $("form").addEventListener("submit", async ev=>{
   ev.preventDefault(); if(!check()) return;
   const btn=$("submit"), label=btn.textContent; btn.disabled=true; btn.textContent="Sending..."; $("e-form").textContent="";
+  if(shotBusy) await shotBusy;
   const has=v=>sel.includes(v);
   const payload={name:$("name").value.trim(), mobile:$("mobile").value.replace(/[\s-]/g,""), email:$("email").value.trim(),
     postcode:$("postcode").value.trim(), interests:sel.join(","), testDriveDate:has("testdrive")?$("tddate").value:"", testDriveTime:has("testdrive")?$("tdtime").value:"",
-    quizEvOwner:answers.evOwner||"", quizAuroraLike:answers.like||"", quizAuroraDislike:answers.dislike||"", postLink:has("comp")?$("post").value.trim():"",
+    quizEvOwner:answers.evOwner||"", quizAuroraLike:answers.like||"", quizAuroraDislike:answers.dislike||"", postImage:has("comp")?shot:"",
     marketingOptIn:$("optin").checked, termsAccepted:true, source:"chadstone-activation", submittedAt:new Date().toISOString()};
   try{
     if(ENDPOINT){ await fetch(ENDPOINT,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)}); }
