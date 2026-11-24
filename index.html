@@ -127,7 +127,7 @@ a{color:var(--dusk)}[hidden]{display:none!important}
 </main>
 <script>
 // CONFIG. ENDPOINT: paste your Google Apps Script web app URL here (see entries-sheet-script.gs).
-const ENDPOINT = "";
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbydJ6XXMn4oyKTpDEkB7kfkUhuLkbLZJGUvvI16VTXrir073DdR6Y60NRDGgAIaZxC0/exec";
 const $ = id => document.getElementById(id);
 const answers = {}; let sel = ["interest"]; let pos = 0; let seq = ["s0"];
 function buildSeq(){ seq = ["s0"]; if(sel.includes("comp")) seq.push("q1","q2"); seq.push("s3","s4"); }
